@@ -156,6 +156,7 @@ fn parse_invocation(attr: Vec<NestedMeta>, input: DeriveInput) -> TokenStream {
                 let mut auth_str: Option<String> = None;
 
                 if (#cookie_key) != "" {
+                    println!("cookie");
                     auth_str = match request.cookies().get(#cookie_key) {
                         None => None,
                         Some(t) => Some(t.value().to_string()),
@@ -163,6 +164,7 @@ fn parse_invocation(attr: Vec<NestedMeta>, input: DeriveInput) -> TokenStream {
                 }
 
                 if (#query_key) != "" && auth_str.is_none() {
+                    println!("query");
                     auth_str = match request.query_value::<String>(#query_key) {
                         None => None,
                         Some(t) => match t {
@@ -173,6 +175,7 @@ fn parse_invocation(attr: Vec<NestedMeta>, input: DeriveInput) -> TokenStream {
                 }
 
                 if auth_str.is_none() {
+                    println!("header");
                     auth_str = match auth_str {
                         Some(auth_str) => Some(auth_str),
                         None => match request.headers().get_one("Authorization") {
@@ -181,6 +184,8 @@ fn parse_invocation(attr: Vec<NestedMeta>, input: DeriveInput) -> TokenStream {
                         }
                     };
                 };
+
+                dbg!(&auth_str);
 
                 if let Some(auth_str) = auth_str {
                   let token = if auth_str.starts_with("Bearer") {
