@@ -1,6 +1,6 @@
 [package]
 name = "rocket-jwt-new"
-version = "0.5.2"
+version = "0.5.3"
 edition = "2021"
 authors = ["Almo7aya <alialmohaya@gmail.com>"]
 repository = "https://github.com/almo7aya/rocket-jwt"
