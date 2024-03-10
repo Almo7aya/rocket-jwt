@@ -154,12 +154,15 @@ fn parse_invocation(attr: Vec<NestedMeta>, input: DeriveInput) -> TokenStream {
 
             async fn from_request(request: &'r #request::Request<'_>,) -> #request::Outcome<Self, #response::status::Custom<String>> {
                 let mut auth_str: Option<String> = None;
+
                 if (#cookie_key) != "" {
                     auth_str = match request.cookies().get(#cookie_key) {
                         None => None,
                         Some(t) => Some(t.value().to_string()),
                     };
-                } else if (#query_key) != "" {
+                }
+
+                if (#query_key) != "" && auth_str.is_none() {
                     auth_str = match request.query_value::<String>(#query_key) {
                         None => None,
                         Some(t) => match t {
@@ -167,7 +170,9 @@ fn parse_invocation(attr: Vec<NestedMeta>, input: DeriveInput) -> TokenStream {
                             Err(_) => None,
                         }
                     }
-                } else {
+                }
+
+                if auth_str.is_none() {
                     auth_str = match auth_str {
                         Some(auth_str) => Some(auth_str),
                         None => match request.headers().get_one("Authorization") {
@@ -178,26 +183,29 @@ fn parse_invocation(attr: Vec<NestedMeta>, input: DeriveInput) -> TokenStream {
                 };
 
                 if let Some(auth_str) = auth_str {
-                    if auth_str.starts_with("Bearer") {
-                        let token = auth_str[6..auth_str.len()].trim();
-                        match #guard_type::decode(token.to_string()) {
-                            Ok(token_data) => {
-                                return #Outcome::Success(token_data.user);
-                            },
-                            Err(err) => {
-                                return #Outcome::Error((
-                                    #Status::Unauthorized,
-                                    #response::status::Custom(
-                                        #Status::Unauthorized,
-                                        err.to_string(),
-                                    ),
-                                ));
-                            },
-                            // Err(_) => {
-                            //     return #Outcome::Forward(());
-                            // },
-                        }
-                    }
+                  let token = if auth_str.starts_with("Bearer") {
+                      auth_str[6..auth_str.len()].trim()
+                  } else {
+                      auth_str.as_str()
+                  };
+
+                  match #guard_type::decode(token.to_string()) {
+                      Ok(token_data) => {
+                          return #Outcome::Success(token_data.user);
+                      },
+                      Err(err) => {
+                          return #Outcome::Error((
+                              #Status::Unauthorized,
+                              #response::status::Custom(
+                                  #Status::Unauthorized,
+                                  err.to_string(),
+                              ),
+                          ));
+                      },
+                      // Err(_) => {
+                      //     return #Outcome::Forward(());
+                      // },
+                  }
                 }
 
                 // #Outcome::Forward(())
